@@ -1,0 +1,36 @@
+module LookupGitDirs (getGitDirectories, getGits) where
+
+import System.FilePath.Find (FindClause, find, fileName, depth, (<=?), (==?), (/~?), (&&?), filePath)
+import Control.Monad
+import Data.Maybe (catMaybes)
+import System.Process (readProcessWithExitCode)
+import System.Exit (ExitCode(..))
+
+getIgnoredList :: IO [String]
+getIgnoredList = liftM words $ readFile "/home/jack/programming/dateParser/gitignores"
+
+addIgnored :: FindClause Bool -> [String] -> FindClause Bool
+addIgnored = foldl (\res next -> res &&? (filePath /~? "**" ++ next ++"**"))
+
+filterFor :: [String] -> FindClause Bool
+filterFor = addIgnored (fileName ==? ".git") 
+
+getGitDirectories :: IO [FilePath]
+getGitDirectories = do
+  let path =  "/home/jack/programming/"
+  ignores <- getIgnoredList
+  onlyGits <- find (depth <=? 3) (filterFor ignores) path
+  return $ onlyGits ++ ["/home/jack/private/.git"]
+
+listGitDirsWithCurrentChanges :: String -> IO (Maybe (String, [String]))
+listGitDirsWithCurrentChanges repoPath = do
+  -- Executes `git rev-list current ^master --no-merges`
+  (code,stdout,_) <- readProcessWithExitCode "git" ["--git-dir", repoPath, "rev-list", "current", "^master", "--no-merges"] "."
+  return $ if code == ExitSuccess then Just (repoPath,words stdout) else Nothing
+
+getGits :: IO [(String, [String])]
+getGits = do
+  gits <- getGitDirectories
+  dires <- mapM listGitDirsWithCurrentChanges gits
+  return $ catMaybes dires
+
