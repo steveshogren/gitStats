@@ -62,23 +62,19 @@ getOldestMissingStr = do
     return $ makeDateString time $ firstMissing expectedDays actual
 
 getOldestMissing :: IO ()
-getOldestMissing = do
-  x <- getOldestMissingStr
-  putStrLn x
+getOldestMissing = getOldestMissingStr >>= putStrLn
 
 getDayString :: String -> Set.Set String -> String
 getDayString expected actuals =
   if Set.member expected actuals then "X" else "_"
 
 printBashGui :: IO ()
-printBashGui = do
-  gui <- getBashGui
-  putStrLn gui
+printBashGui =  getBashGui >>= putStrLn
 
 getBashGui :: IO String
 getBashGui = do
-  actualDays <- getLastNGitCommitDays 10
-  expectedDays <- generateLastNDays 10
+  actualDays <- getLastNGitCommitDays 30
+  expectedDays <- generateLastNDays 30
   let actual = Set.fromList actualDays
   return $ foldl (\acc next -> acc ++ getDayString next actual) "" expectedDays
 
