@@ -61,6 +61,19 @@ getOldestMissingStr = do
     time <- getTime
     return $ makeDateString time $ firstMissing expectedDays actual
 
+allMissing :: Set.Set String -> Set.Set String -> Set.Set String
+allMissing expected actual = Set.difference expected actual
+
+getAllMissingStr :: IO String
+getAllMissingStr = do
+  actualDays <- getLastNGitCommitDays 40
+  expectedDays <- generateLastNDays 40
+  let actual = Set.fromList actualDays
+  let expected = Set.fromList expectedDays
+  time <- getTime
+  let missing = allMissing expected actual
+  return $ Set.fold (\d ret -> makeDateString time d ++ "\n" ++ ret) "" missing
+
 getOldestMissing :: IO ()
 getOldestMissing = getOldestMissingStr >>= putStrLn
 
@@ -106,7 +119,8 @@ main = getArgs >>= parse
 parse :: [String] -> IO ()
 parse ["-h"] = usage   >> exit
 parse ["-v"] = version >> exit
-parse ["-c"] = getOldestMissing
+parse ["-ca"] = getOldestMissing
+parse ["-c"] = getAllMissingStr >>= putStrLn
 parse ["-b"] = printBashGui
 parse ["-u"] = updateGitHooks
 parse ["-w"] = updateGitBashGui
