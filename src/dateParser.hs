@@ -111,6 +111,7 @@ parse ["-h"] = usage   >> exit
 parse ["-v"] = version >> exit
 parse ["-ca"] = getOldestMissing
 parse ["-c"] = getAllMissingStr >>= putStrLn
+               >> getBashGui >>= putStrLn
 parse ["-b"] = printBashGui
 parse ["-u"] = updateGitHooks
 parse ["-w"] = updateGitBashGui
