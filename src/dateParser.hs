@@ -12,13 +12,10 @@ import Data.Time.LocalTime ()
 import System.Environment
 import System.Exit
 import LookupGitDirs (getGitDirectories, getGits)
-import DateStuff (ExpectedDays, generateLastNDays , getTime, makeDateString)
+import DateStuff (generateLastNDays , getTime, makeDateString)
 import qualified Data.Set as Set
 
 type ActualDays = [String]
-
-toInt :: String -> Int
-toInt = read
 
 lastN :: Int -> [a] -> [a]
 lastN n xs = foldl (const .drop 1) xs (drop n xs)
@@ -27,7 +24,7 @@ getCommitDates :: String -> IO [ClockTime]
 getCommitDates repoPath = do
   hout <- readProcess "git" ["--git-dir", repoPath, "log", "--pretty=format:\"%at\""] "."
   let x =  splitOn "\n" hout
-  return $ map (epochToClockTime . toInt . replace "\"" "") x
+  return $ map (epochToClockTime . read . replace "\"" "") x
 
 updateGitHooks :: IO ()
 updateGitHooks = do
@@ -40,9 +37,9 @@ convertClockToString clk = do
   ct <- toCalendarTime clk
   return $ formatCalendarTime defaultTimeLocale "%Y-%m-%d" ct
 
-firstMissing :: ExpectedDays -> Set.Set String -> String
-firstMissing (expected:exs) actual =
-  if Set.notMember expected actual then expected else firstMissing exs actual
+firstMissing :: Set.Set String -> Set.Set String -> String
+firstMissing expected actual =
+  head $ Set.toList $ Set.difference expected actual
 
 getLastNGitCommitDays :: Int -> IO ActualDays
 getLastNGitCommitDays n = do
@@ -52,14 +49,13 @@ getLastNGitCommitDays n = do
 
 getOldestMissingStr :: IO String
 getOldestMissingStr = do
-  actualDays <- getLastNGitCommitDays 40
-  expectedDays <- generateLastNDays 40
-  let actual = Set.fromList actualDays
+  actual <- Set.fromList <$> getLastNGitCommitDays 40
+  expected <- Set.fromList <$> generateLastNDays 40
 
-  if expectedDays == actualDays then return ""
+  if expected == actual then return ""
   else do
     time <- getTime
-    return $ makeDateString time $ firstMissing expectedDays actual
+    return $ makeDateString time $ firstMissing expected actual
 
 getAllMissingStr :: IO String
 getAllMissingStr = do
