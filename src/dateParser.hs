@@ -61,17 +61,12 @@ getOldestMissingStr = do
     time <- getTime
     return $ makeDateString time $ firstMissing expectedDays actual
 
-allMissing :: Set.Set String -> Set.Set String -> Set.Set String
-allMissing expected actual = Set.difference expected actual
-
 getAllMissingStr :: IO String
 getAllMissingStr = do
-  actualDays <- getLastNGitCommitDays 40
-  expectedDays <- generateLastNDays 40
-  let actual = Set.fromList actualDays
-  let expected = Set.fromList expectedDays
+  actual <- getLastNGitCommitDays 40
+  expected <- generateLastNDays 40
   time <- getTime
-  let missing = allMissing expected actual
+  let missing = Set.difference (Set.fromList expected) (Set.fromList actual)
   return $ Set.fold (\d ret -> makeDateString time d ++ "\n" ++ ret) "" missing
 
 getOldestMissing :: IO ()
@@ -110,8 +105,7 @@ printGitDirsWithCurrents :: IO ()
 printGitDirsWithCurrents = do
   dateStr <- getOldestMissingStr
   output <- getGits
-  let x = concatMap (printSingleGitCurrent dateStr) output
-  putStrLn x
+  putStrLn $ concatMap (printSingleGitCurrent dateStr) output
 
 main :: IO ()
 main = getArgs >>= parse
